@@ -48,7 +48,7 @@ Chunk *request_space(Chunk* last, size_t size) {
     return block;
 }
 
-void *malloc(size_t size) {
+void *allocam(size_t size) {
     Chunk *block;
     if(size <= 0) 
         return NULL;
@@ -75,7 +75,7 @@ Chunk *get_chunk_pointer(void *pointer) {
     return (Chunk*) pointer - 1;
 }
 
-void free(void *pointer) {
+void freem(void *pointer) {
     if(!pointer)
         return;
     Chunk *chunk_pointer = get_chunk_pointer(pointer);
@@ -85,7 +85,7 @@ void free(void *pointer) {
 
 int main(void) {
     for(int i = 0; i < 10; i++) {
-        void *p = malloc(i);
+        void *p = allocam(i);
         printf("%p\n", (void *) p);
     }
     return 0;
