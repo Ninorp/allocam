@@ -15,13 +15,6 @@ struct chunk {
 
 #define CHUNK_SIZE sizeof(Chunk)
 
-int MyMallocInit(int size) {
-    void *request = sbrk(size);
-    if(request == (void*) -1)
-        return 0;
-    return 1;
-}
-
 Chunk *find_free_chunk(Chunk** last, size_t size) {
     Chunk *current = global_pointer;
     while(current && !(current->free && current->size >= size)) {
@@ -48,6 +41,15 @@ Chunk *request_space(Chunk* last, size_t size) {
     return block;
 }
 
+void split_chunk(Chunk *block, size_t size) {
+    Chunk *new;
+    new->size = block->size - CHUNK_SIZE - size;
+    new->next = block->next;
+    new->free = 1;
+    block->size = size;
+    block->next = new;
+}
+
 void *malloc(size_t size) {
     Chunk *block;
     if(size <= 0) 
@@ -65,10 +67,11 @@ void *malloc(size_t size) {
             if(!block)
                 return NULL;
         } else {
+            if (size < block->size) split_chunk(block, size);
             block->free = 0;
         }
     }
-    return(block + 1); // nós queremos retornar o ponteiro para a regiao após o metadata do bloco
+    return(block + 1); // retorna o ponteiro para a regiao após o metadata do bloco
 }
 
 Chunk *get_chunk_pointer(void *pointer) {
@@ -84,9 +87,8 @@ void free(void *pointer) {
 }
 
 int main(void) {
-    for(int i = 0; i < 10; i++) {
-        void *p = malloc(i);
-        printf("%p\n", (void *) p);
-    }
+    void *p = malloc(2);
+    printf("%p\n", (void *) p);
+    free(p);
     return 0;
 }
