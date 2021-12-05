@@ -1,31 +1,19 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <stdio.h>
-
-struct chunk {
-    size_t size;
-    struct chunk *next;
-    struct chunk *prev;
-    void *pointer;
-    int free;
-    char data[1];
-} __attribute__((packed));
-
-#define BLOCK_SIZE (sizeof(struct chunk) - 1)
-
-typedef struct chunk *block;
+#include "mymalloc.h"
 
 void *global_pointer = NULL;
 
-void split_block(block b, size_t s) {
+void split_block(block b, size_t size) {
     block new;
-    new = (block)(b->data + s);
-    new->size = b->size - s - BLOCK_SIZE;
+    new = (block)(b->data + size);
+    new->size = b->size - size - BLOCK_SIZE;
     new->next = b->next;
     new->prev = b;
     new->free = 1;
     new->pointer = new->data;
-    b->size = s;
+    b->size = size;
     b->next = new;
     if(new->next)
         new->next->prev = new;
@@ -40,12 +28,12 @@ block find_block(block *last, size_t size) {
     return b;
 }
 
-block extend_heap(block last, size_t s) {
+block extend_heap(block last, size_t size) {
     block b = (block) sbrk(0);
-    if(sbrk(BLOCK_SIZE + s) == (void *) -1) {
+    if(sbrk(BLOCK_SIZE + size) == (void *) -1) {
         return NULL;
     }
-    b->size = s;
+    b->size = size;
     b->next = NULL;
     b->prev = last;
     b->pointer = b->data;
@@ -56,46 +44,48 @@ block extend_heap(block last, size_t s) {
     return b;
 }
 
-void *malloc(size_t size) {
+void *mymalloc(size_t size) {
     block b;
     if(global_pointer) {
         block last = (block) global_pointer;
         b = find_block(&last, size);
         if(b) {
-            if((b->size - size) >= (BLOCK_SIZE))
+            if((b->size - size) >= (BLOCK_SIZE)) {
                 split_block(b, size);
+            }
             b->free = 0;
         } else {
             b = extend_heap(last, size);
-            if(!b)
+            if(!b) {
                 return NULL;
+            }
         }
     } else {
         b = extend_heap(NULL, size);
-        if(!b)
+        if(!b) {
             return NULL;
+        }
         global_pointer = b;
     }
     return b->data;
 }
 
-block get_block(void *p) {
-    char *tmp;
-    tmp = p;
-    return (p = tmp -= BLOCK_SIZE);
+block get_block(void *pointer) {
+    char *sup;
+    sup = pointer;
+    return pointer = sup -= BLOCK_SIZE;
 }
 
-int valid_addr(void *p) {
+int verify_valid_addr(void *pointer) {
     if(global_pointer) {
-        if(p > global_pointer && p < sbrk(0)) {
-            block test = get_block(p);
-            return p == (get_block(p)->pointer);
+        if(pointer > global_pointer && pointer < sbrk(0)) {
+            return pointer == get_block(pointer)->pointer;
         }
     }
     return 0;
 }
 
-block fusion(block b) {
+block merge_blocks(block b) {
     if(b->next && b->next->free) {
         b->size += BLOCK_SIZE + b->next->size;
         b->next = b->next->next;
@@ -105,15 +95,15 @@ block fusion(block b) {
     return b;
 }
 
-void free(void *p) {
-    if (valid_addr(p)) {
-        block b = get_block(p);
+void myfree(void *pointer) {
+    if (verify_valid_addr(pointer)) {
+        block b = get_block(pointer);
         b->free = 1;
         if(b->prev && b->prev->free) {
-            b = fusion(b->prev);
+            b = merge_blocks(b->prev);
         }
         if(b->next) {
-            fusion(b);
+            merge_blocks(b);
         } else {
             if(b->prev) {
                 b->prev->next = NULL;
@@ -125,10 +115,10 @@ void free(void *p) {
     }
 }
 
-void MyMallocGerency() {
+void mymallocgerency() {
     printf("------MEMORY SPACES-----\n");
     block b = global_pointer;
-    while(b && b->next) {
+    while(b) {
         printf("%p", (void *) b);
         printf(" - ");
         printf("TAMANHO: %ld BYTES", b->size);
@@ -140,13 +130,4 @@ void MyMallocGerency() {
         }
         b = b->next;
     }
-}
-
-int main(void) {
-    int *a = malloc(4* sizeof(int));
-    int *b = malloc(4* sizeof(int));
-    free(a);
-    int *c = malloc(sizeof(int));
-    MyMallocGerency();
-    return 0;
 }
