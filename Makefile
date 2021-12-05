@@ -6,6 +6,3 @@ mymalloc.o:
 
 clean:
 	rm -rf *.o main
-
-mrproper: clean
-	rm -rf teste
