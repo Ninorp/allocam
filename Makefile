@@ -1,8 +1,7 @@
-all: mymalloc.o
-	gcc -o main main.c mymalloc.o
-
-mymalloc.o:
-	gcc -o mymalloc.o -c mymalloc.c
+all: 
+	gcc -o lib/mymalloc.o -c lib/mymalloc.c
+	gcc -o test/test.o -c test/test.c
+	gcc -o main main.c lib/mymalloc.o test/test.o
 
 clean:
-	rm -rf *.o main
+	rm -rf main */*.o

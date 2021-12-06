@@ -4,6 +4,7 @@
 #include "mymalloc.h"
 
 void *global_pointer = NULL;
+int global_free_count = 0;
 
 void split_block(block b, size_t size) {
     block new;
@@ -54,6 +55,7 @@ void *mymalloc(size_t size) {
                 split_block(b, size);
             }
             b->free = 0;
+            global_free_count--;
         } else {
             b = extend_heap(last, size);
             if(!b) {
@@ -89,16 +91,33 @@ block merge_blocks(block b) {
     if(b->next && b->next->free) {
         b->size += BLOCK_SIZE + b->next->size;
         b->next = b->next->next;
-        if(b->next)
+        if(b->next) {
             b->next->prev = b;
+        }
+        global_free_count--;
     }
     return b;
+}
+
+void merge_all() {
+    // for(int i = 0; i < global_free_count; i++) {
+    //     while(b) {
+    //         if(b->free) {
+    //             b->size = b->next->size;
+    //             b->free = b->next->free;
+    //             b->data = b->next->data;
+    //             b->next = b->next->next;
+    //         }
+    //         b = b->next;
+    //     }
+    // }
 }
 
 void myfree(void *pointer) {
     if (verify_valid_addr(pointer)) {
         block b = get_block(pointer);
         b->free = 1;
+        global_free_count++;
         if(b->prev && b->prev->free) {
             b = merge_blocks(b->prev);
         }
@@ -111,11 +130,17 @@ void myfree(void *pointer) {
                 global_pointer = NULL;
             }
             brk(b);
+            global_free_count--;
         }
+
+        // if(global_free_count >= FRAGM_LIMIT) {
+        //     merge_all();
+        // }
     }
 }
 
 void mymallocgerency() {
+    printf("%d\n", global_free_count);
     printf("------MEMORY SPACES-----\n");
     block b = global_pointer;
     while(b) {
