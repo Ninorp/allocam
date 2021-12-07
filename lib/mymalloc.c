@@ -99,18 +99,41 @@ block merge_blocks(block b) {
     return b;
 }
 
+void copy_data(block source, block dest) {
+    int *source_data, *dest_data;
+    size_t i;
+    source_data = source->pointer;
+    dest_data = dest->pointer;
+    for(i = 0; i < source->size && i < dest->size; i++) {
+        dest_data[i] = source_data[i];
+    }
+}
+
 void merge_all() {
-    // for(int i = 0; i < global_free_count; i++) {
-    //     while(b) {
-    //         if(b->free) {
-    //             b->size = b->next->size;
-    //             b->free = b->next->free;
-    //             b->data = b->next->data;
-    //             b->next = b->next->next;
-    //         }
-    //         b = b->next;
-    //     }
-    // }
+    block b = (block) global_pointer;
+    while(global_free_count >= FRAGM_LIMIT) {
+        if(b->free) {
+            block hold_next;
+            if(b->next->next)
+                hold_next = b->next->next;
+            block sup = b->next;
+            size_t hold_size = b->size;
+            b->size = b->next->size;
+            b->free = b->next->free;
+            copy_data(b->next, b);
+            sup = b + BLOCK_SIZE + b->size;
+            sup->free = 1;
+            sup->size = hold_size;
+            sup->next = hold_next;
+            sup->prev = b;
+            sup->pointer = sup->data;
+            b->next = sup;
+        }
+        b = b->next;
+        if(b->next->free) {
+            merge_blocks(b);
+        }
+    }
 }
 
 void myfree(void *pointer) {
@@ -133,14 +156,13 @@ void myfree(void *pointer) {
             global_free_count--;
         }
 
-        // if(global_free_count >= FRAGM_LIMIT) {
-        //     merge_all();
-        // }
+        if(global_free_count >= FRAGM_LIMIT) {
+            merge_all();
+        }
     }
 }
 
 void mymallocgerency() {
-    printf("%d\n", global_free_count);
     printf("------MEMORY SPACES-----\n");
     block b = global_pointer;
     while(b) {
@@ -155,4 +177,8 @@ void mymallocgerency() {
         }
         b = b->next;
     }
+}
+
+void freecountgerency() {
+    printf("%d\n", global_free_count);
 }
