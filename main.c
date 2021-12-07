@@ -11,6 +11,7 @@ int main(void) {
     test_time_mymalloc();
     test_performance_malloc();
     test_performance_mymalloc();
+    test_fragmentation_mymalloc();
 
     return 0;
 }

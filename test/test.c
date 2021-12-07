@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <time.h>
 #include "test.h"
 #include "../lib/mymalloc.h"
 
@@ -69,4 +70,22 @@ void test_performance_mymalloc() {
     gettimeofday(&tval_after, NULL);
     timersub(&tval_after, &tval_before, &tval_result);
     printf("MyMalloc - Tempo decorrido: %ld.%06ld seconds\n", (long int)tval_result.tv_sec, (long int)tval_result.tv_usec);
+}
+
+void test_fragmentation_mymalloc() {
+    printf("Testando Fragmentação - MyMalloc\n");
+    srand(time(NULL));
+
+    for (size_t j = 1000; j <= 10000; j += 1000) {
+        int *inteiros = (int *) mymalloc(sizeof(int) * j);
+        block test = get_block(inteiros);
+        int r = rand();
+        if(r % 2 == 0) {
+            if(test->prev) 
+                myfree(test->prev->pointer);
+        }
+    }
+    
+    printf("MyMalloc - Fragmentação Total: ");
+    freecountgerency();
 }
